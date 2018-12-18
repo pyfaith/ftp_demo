@@ -6,6 +6,28 @@
 
 import socketserver
 import json
+import configparser
+
+STATUS_CODE = {
+    250: "",
+    251: "",
+    252: "",
+    253: "",
+    254: "",
+    255: "",
+    256: "",
+    250: "",
+    250: "",
+    250: "",
+    250: "",
+    250: "",
+    250: "",
+    250: "",
+    250: "",
+}
+
+
+from conf import settings
 
 class ServerHandler(socketserver.BaseRequestHandler):
 
@@ -32,6 +54,32 @@ class ServerHandler(socketserver.BaseRequestHandler):
             else:#error
                 pass
 
+    def send_response(self, status_code):
+        response = {"status_code": status_code, "status_msg": STATUS_CODE[status_code],}
+        self.request.sendall(json.dumps(response).encode("utf8"))
+
     def auth(self, **data):
         '''用户验证'''
-        print("data", data)
+        username = data["username"]
+        password = data["password"]
+
+        user = self.authenticate(username, password)
+
+        if user:
+            self.send_response(254)
+        else:
+            self.send_response(253)
+
+    def authenticate(self, user, pwd):
+        cfg = configparser.ConfigParser()
+        cfg.read(settings.ACCOUNT_PATH)
+
+        if user in cfg.sections():
+
+            if pwd == cfg[user]["Password"]:
+                self.user = user
+                print("用户验证成功")
+                return user
+
+
+
