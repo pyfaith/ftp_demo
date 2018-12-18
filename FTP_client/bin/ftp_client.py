@@ -9,7 +9,7 @@ import socket
 import json
 
 
-class CLientHandler(object):
+class ClientHandler(object):
 
     def __init__(self):
         self.op = optparse.OptionParser()
@@ -59,7 +59,7 @@ class CLientHandler(object):
 
         return self.get_auth_result(self.options.username, self.options.password)
 
-    def response(self, data):
+    def response(self):
         data = self.sock.recv(1024).decode("utf8")
         data = json.loads(data)
         return data
@@ -72,7 +72,8 @@ class CLientHandler(object):
             "password": pwd,
         }
         data = self.sock.send(json.dumps(data).encode("utf8"))
-        response = self.response(data)
+        response = self.response()
+        print(response)
 
 
 
@@ -80,6 +81,6 @@ class CLientHandler(object):
 
 
 if __name__ == '__main__':
-    ch = CLientHandler()
+    ch = ClientHandler()
 
     ch.interactive()
