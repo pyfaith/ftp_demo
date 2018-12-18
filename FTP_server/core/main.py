@@ -39,6 +39,7 @@ class ArgvHandler(object):
     def start(self, options, args):
         '''启动服务'''
         s = socketserver.ThreadingTCPServer((settings.IP, settings.PORT), server.ServerHandler)
+        print("start server....")
         s.serve_forever()
 
     def restart(self, options, args):
