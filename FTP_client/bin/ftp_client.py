@@ -8,6 +8,7 @@ import optparse
 import socket
 import json
 import os
+import sys
 
 class ClientHandler(object):
 
@@ -18,10 +19,12 @@ class ClientHandler(object):
         self.op.add_option("-P", "--port", dest="port")
         self.op.add_option("-u", "--username", dest="username")
         self.op.add_option("-p", "--password", dest="password")
+        self.last = 0
 
         self.options, self.args = self.op.parse_args()
 
         self.verify_args(self.options, self.args)
+
 
         self.make_connection()
         self.main_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,13 +53,17 @@ class ClientHandler(object):
         '''开始用户交互'''
         print("begin to interactive ......")
         if self.authenticate():
+            while 1:
 
-            cmd_info = input("[{user}]".format(user=self.user)).strip() #eg put test.py testdir
+                cmd_info = input("[{user}]".format(user=self.user)).strip() #eg put test.py testdir
 
-            cmd_list = cmd_info.split()
-            if hasattr(self, cmd_list[0]):
-                func = getattr(self, cmd_list[0])
-                func(*cmd_list)
+                cmd_list = cmd_info.split()
+                if len(cmd_list):#用户按回车
+                    if hasattr(self, cmd_list[0]):
+                        func = getattr(self, cmd_list[0])
+                        func(*cmd_list)
+                else:
+                    print("请输入你想执行的命令")
 
     def put(self, *cmd_list):
         '''put af.png dirimages'''
@@ -111,30 +118,46 @@ class ClientHandler(object):
         if is_exists == "800": #文件不完整******
             ''''''
             choice = input("this file exist, but not enough, is conutine? [[Y/N or y/n]]").strip()
-            if choice.upper() == "Y":
+            if choice.upper() == "Y": #用户需要续传文件
                 self.sock.sendall("Y".encode("utf8"))
 
                 continue_position = self.sock.recv(1024).decode("utf8") #获取服务端已有文件大小
+                has_sent += int(continue_position)
 
-
-
-            else:
+            else: #不续传文件
                 self.sock.sendall("N".encode("utf8"))
 
         elif is_exists == "801": #服务端文件存在，并且完整
             return
 
-
         f = open(local_path, "rb")
+        f.seek(has_sent)  # 从上次为传完部分开始续传文件
         while has_sent < file_size:
             data = f.read(1024)
             self.sock.sendall(data)
             has_sent += len(data)
+            self.show_progress(has_sent, file_size)
 
         f.close()
         print("put success!")
         ###################****************###########################
 
+
+    def show_progress(self, has, total):
+        '''
+        打印进度条
+        :param has: 已经完成数量
+        :param total: 总量
+        :return:
+        '''
+
+        rate = float(has) / float(total)
+        rate_num = int(rate * 100)
+        if self.last != rate_num:
+            sys.stdout.write("{}%{}\r".format(rate_num, "#" * rate_num))
+        self.last = rate_num
+        if self.last == 100:
+            sys.stdout.write("\n")
 
 
 
@@ -152,6 +175,7 @@ class ClientHandler(object):
         return self.get_auth_result(self.options.username, self.options.password)
 
     def response(self):
+        '''接受服务端数据'''
         data = self.sock.recv(1024).decode("utf8")
         data = json.loads(data)
         return data
@@ -181,5 +205,4 @@ class ClientHandler(object):
 
 if __name__ == '__main__':
     ch = ClientHandler()
-
     ch.interactive()

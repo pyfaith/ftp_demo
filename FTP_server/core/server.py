@@ -41,7 +41,10 @@ class ServerHandler(socketserver.BaseRequestHandler):
 
         while 1:
             data = self.request.recv(1024).decode("utf8").strip()
-            data = json.loads(data)
+            try:
+                data = json.loads(data)
+            except json.decoder.JSONDecodeError as e: #非json数据 Y/N
+                pass
             # data type
             # '''
             # {   "action": "auth",
@@ -86,7 +89,7 @@ class ServerHandler(socketserver.BaseRequestHandler):
             if pwd == cfg[user]["Password"]:
                 self.user = user
                 self.main_path = os.path.join(settings.BASE_DIR, "home", user)
-                print("用户验证成功:", user)
+                print("auth success:", user)
                 return user
 
 
@@ -150,7 +153,7 @@ class ServerHandler(socketserver.BaseRequestHandler):
 
             else: #服务端文件是完整文件
                 self.request.sendall("801".encode("utf8"))
-                return
+                return ###>>>>>>self.handle
 
         else: #服务端没有该文件
             self.request.sendall("802".encode("utf8"))
@@ -159,7 +162,10 @@ class ServerHandler(socketserver.BaseRequestHandler):
 
         #接受客户端发送过来的文件
         while has_received < file_size:
-            data = self.request.recv(1024)
+            try:
+                data = self.request.recv(1024)
+            except Exception as e:
+                break
             f.write(data)
             has_received += len(data)
         f.close()
